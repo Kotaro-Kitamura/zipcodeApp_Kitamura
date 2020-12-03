@@ -1,41 +1,101 @@
 import { StatusBar } from 'expo-status-bar';
-import React from 'react';
+import React, {useState} from 'react';
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  Button,
-  Pressable,
   TextInput,
   Dimensions,
-  TouchableWithoutFeedback,
-  Keyboard,
   FlatList,
+  ListRenderItemInfo,
+  SafeAreaView,
 } from "react-native";
-
-const apiBaseURL = "https://zipcloud.ibsnet.co.jp/api/search";
+import axios from "axios";
 
 const screenWidth = Dimensions.get("screen").width;
 const screenHeight = Dimensions.get("screen").height; 
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <View style={styles.wrapper}>
-      <View style={styles.inputs}>
-        <TextInput style={styles.inputText} value="郵便番号入力欄" />
-        <Pressable>
-          <Text style={styles.buttonText}>住所を取得</Text>
-        </Pressable>
-      </View>
-      <Text style={styles.resultText}>住所表示(result)</Text>
+const apiBaseURL = "https://zipcloud.ibsnet.co.jp/api/search";
 
-      <StatusBar style="auto" />
+export default function App() {
+    const [zipcode, setZipcode] = useState<string>("");
+    const [addressList, setAddressList] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const updateScreenAsyn = async() => {
+      setIsLoading(true);
+
+       try {
+        const addressList = await getAddressInfo(zipcode);
+        if (addressList === null ) {
+          alert("住所が取得できません");
+        } else {
+          setAddressList(addressList);
+        } 
+      } catch(error) {
+        alert(error);
+      }
+      setIsLoading(false);
+    };
+    const getAddressInfo = async (zipcode: string) => {
+      const requestConfig = {
+        baseURL: apiBaseURL,
+        params: { zipcode: zipcode }
+      };
+
+        const response = await axios(requestConfig);
+        console.log(response);
+        const addressList = response.data.results;
+
+        return addressList;
+    };
+      const loadingView = <Text>Loading</Text>;
+      const renderAddressItem = ({ item }: ListRenderItemInfo<any>) => {
+        return(
+          <Text>
+            {item.address1}
+            {item.address2}
+            {item.address3}
+          </Text>
+        );
+      };
+
+    const listContainerView = (
+     <View>
+       <FlatList
+       data={addressList}
+       renderItem={renderAddressItem}
+       keyExtractor={(item, index) => `${index}`}
+       />
       </View>
-    </View>
+   );
+   
+  return (
+      <SafeAreaView style={styles.container}>
+         <View style={styles.userContainer}>
+           <TextInput
+           onChangeText={(postCode) => setZipcode(postCode)}
+           style={styles.inputText}
+           keyboardType="numeric"
+           placeholder="郵便番号"
+           maxLength={7}
+           />
+           
+     <TouchableOpacity style={styles.button} onPress={updateScreenAsyn}>
+       <Text style={styles.buttonText}>住所を取得</Text>
+       </TouchableOpacity>
+       </View>
+
+       <View style={styles.list}>
+         {isLoading ? loadingView : listContainerView}
+         </View>
+
+         <StatusBar style="auto"/>
+     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -43,9 +103,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  wrapper: {
-    flex: 0.8,
-    flexDirection: "column",
+  userContainer: {
+    flexDirection: "row",
+    position: "absolute",
+    top: "30%",
     justifyContent: "center",
   },
   resultText: {
@@ -54,28 +115,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 5,
   },
-  inputs: {
-    flexDirection: "row",
-    marginBottom: 200,
-    justifyContent: "space-between",
-  },
   inputText: {
-    textAlign: "right",
+    textAlign: "left",
     padding: 10,
     fontSize: 15,
     backgroundColor: "white",
     color: "black",
-    marginBottom: 10,
+    width: "50%",
     borderColor: 'black',
-    justifyContent: "space-between",
+    borderwidth: 3,
   },
-  Pressable: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  buttons: {
+  button: {
     width: 300,
     height: 80,
+    padding: 10,
+    margin: 5,
     borderWidth: 3,
     borderRadius: 20,
     borderColor: "gray",
@@ -84,15 +138,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: {
-    textAlign: "center",
-    color: "black",
     fontSize: 15,
-    backgroundColor: "white",
-    width: 90,
-    height: 38,
-    lineHeight: 40,
-    alignItems: "center",
-    borderRadius: 30,
-    justifyContent: "space-between",
-  },
-});
+     },
+     list: {
+    position: "absolute",
+    top: "40%",
+    backgroundColor: "#fff",
+    width: screenWidth * 0.8,
+    borderWidth: 3,
+    borderColor: "#000000",
+    height: screenHeight * 0.5,
+},
+})
+
+  
+     
